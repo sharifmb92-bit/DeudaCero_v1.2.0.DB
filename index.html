@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Deuda Cero_v 1.2.0</title>
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" type="image/svg+xml" href="./icon.svg">
+  <link rel="apple-touch-icon" href="./icon.svg">
+  <meta name="theme-color" content="#0f172a">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background-color: #0f172a; color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; }
+    .accordion-content { transition: max-height 0.35s cubic-bezier(0, 1, 0, 1); max-height: 0; overflow: hidden; }
+    .accordion-content.open { max-height: 1400px; transition: max-height 0.35s ease-in-out; }
+    .chevron { transition: transform 0.25s ease; }
+    .chevron.rotate { transform: rotate(180deg); }
+    .hexagon { clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%); }
+  </style>
+</head>
+<body class="pb-24 select-none min-h-screen flex flex-col justify-between">
+
+  <!-- Header con botón de ayuda (?) y versión -->
+  <header class="bg-slate-900 border-b border-slate-800 p-4 sticky top-0 z-40 shadow-md">
+    <div class="max-w-md mx-auto flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-lg">⚡</div>
+        <h1 class="text-lg font-bold text-slate-100">Deuda Cero <span class="text-xs text-slate-500 font-normal">v1.2.0</span></h1>
+      </div>
+      <button onclick="abrirTutorial()" class="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 text-emerald-400 font-bold flex items-center justify-center hover:bg-slate-700 transition" title="Ver Tutorial">
+        ?
+      </button>
+    </div>
+  </header>
+
+  <main class="max-w-md mx-auto p-4 space-y-5 w-full flex-grow">
+
+    <!-- Resumen Principal & Fecha de Libertad Financiera -->
+    <section class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg space-y-4">
+      <div class="flex justify-between items-baseline">
+        <span class="text-xs uppercase tracking-wider font-semibold text-slate-400">Total Deuda Pendiente</span>
+        <span id="total-deuda" class="text-2xl font-black text-rose-400">0,00 €</span>
+      </div>
+
+      <!-- Banner Histórico Abonado hasta hoy -->
+      <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-3 flex items-center justify-between">
+        <div>
+          <span class="text-[11px] uppercase font-bold text-slate-400 block">Total Abonado Hasta Hoy</span>
+          <span id="total-abonado-historico" class="text-base font-extrabold text-emerald-400">0,00 €</span>
+        </div>
+        <div class="text-right">
+          <span class="text-[11px] uppercase font-bold text-slate-400 block">Progreso Global</span>
+          <span id="porcentaje-global" class="text-base font-extrabold text-blue-400">0%</span>
+        </div>
+      </div>
+
+      <!-- Banner Libertad Financiera -->
+      <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3 flex items-center justify-between">
+        <div>
+          <span class="text-[11px] uppercase font-bold text-emerald-400 block">Libertad Financiera Estimada</span>
+          <span id="fecha-libertad" class="text-sm font-extrabold text-slate-100">Calculando...</span>
+        </div>
+        <span class="text-2xl">🕊️</span>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3 pt-2 border-t border-slate-800 text-sm">
+        <div>
+          <p class="text-slate-400 text-xs">Cuotas Mínimas</p>
+          <p id="total-cuotas" class="font-bold text-slate-200">0,00 €/mes</p>
+        </div>
+        <div>
+          <p class="text-slate-400 text-xs">Aportación Extra</p>
+          <p id="total-extra" class="font-bold text-emerald-400">0,00 €/mes</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Botón Plegable: Guía Fácil (Para no expertos) -->
+    <section class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-sm">
+      <button onclick="toggleAccordion('sec-guia', 'chev-guia')" class="w-full p-4 flex items-center justify-between text-left hover:bg-slate-800/50 transition">
+        <div class="flex items-center gap-3">
+          <span class="text-xl">💡</span>
+          <div>
+            <h2 class="text-sm font-semibold text-slate-200">¿Cómo funciona esta App?</h2>
+            <p class="text-xs text-slate-400">Explicación en palabras sencillas</p>
+          </div>
+        </div>
+        <svg id="chev-guia" class="chevron w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+      </button>
+      
+      <div id="sec-guia" class="accordion-content border-t border-slate-800/80 bg-slate-950/60 p-4 space-y-3 text-xs text-slate-300 leading-relaxed">
+        <p><strong class="text-emerald-400">1. Añade deudas antiguas o nuevas:</strong> Introduce cuándo empezaste a pagar (ej. hace 5 o 10 años). La app te dirá exactamente cuánto has pagado ya y cuánto te queda.</p>
+        <p><strong class="text-emerald-400">2. Elige tu estrategia:</strong></p>
+        <ul class="list-disc pl-4 space-y-1 text-slate-400">
+          <li><strong>Bola de Nieve:</strong> Ataca primero la deuda de consumo más pequeña para despejar pagos rápido.</li>
+          <li><strong>Avalancha:</strong> Ataca primero la de mayor interés (TAE %) para ahorrar el máximo de dinero.</li>
+        </ul>
+        <p><strong class="text-emerald-400">3. Aporta un extra mensual:</strong> Mira cómo poner 20 € o 50 € extra al mes adelanta tu libertad financiera varios años.</p>
+      </div>
+    </section>
+
+    <!-- Botón Plegable: Configurar Estrategia y Aportación Extra -->
+    <section class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-sm">
+      <button onclick="toggleAccordion('sec-estrategia', 'chev-estrategia')" class="w-full p-4 flex items-center justify-between text-left hover:bg-slate-800/50 transition">
+        <div class="flex items-center gap-3">
+          <span class="text-xl">🎯</span>
+          <div>
+            <h2 class="text-sm font-semibold text-slate-200">Estrategia y Extra Mensual</h2>
+            <p class="text-xs text-slate-400">Acelera la eliminación de deudas</p>
+          </div>
+        </div>
+        <svg id="chev-estrategia" class="chevron w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+      </button>
+      
+      <div id="sec-estrategia" class="accordion-content border-t border-slate-800/80 bg-slate-900/50 p-4 space-y-4">
+        <div class="grid grid-cols-2 gap-2 p-1 bg-slate-950 rounded-xl">
+          <button id="btn-nieve" onclick="setEstrategia('nieve')" class="py-2 text-xs font-semibold rounded-lg transition bg-emerald-500 text-slate-950">Bola de Nieve</button>
+          <button id="btn-avalancha" onclick="setEstrategia('avalancha')" class="py-2 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 transition">Avalancha</button>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1">Aportación mensual extra (€)</label>
+          <input type="number" id="input-extra" value="50" oninput="actualizarSimulacion()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 text-sm focus:outline-none focus:border-emerald-500">
+        </div>
+      </div>
+    </section>
+
+    <!-- Botón Plegable: Formulario Añadir Deuda -->
+    <section class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-sm">
+      <button onclick="toggleAccordion('sec-nueva-deuda', 'chev-nueva-deuda')" class="w-full p-4 flex items-center justify-between text-left hover:bg-slate-800/50 transition">
+        <div class="flex items-center gap-3">
+          <span class="text-xl">➕</span>
+          <div>
+            <h2 class="text-sm font-semibold text-slate-200">Añadir Nueva / Antigua Deuda</h2>
+            <p class="text-xs text-slate-400">Tarjeta, crédito o hipoteca existente</p>
+          </div>
+        </div>
+        <svg id="chev-nueva-deuda" class="chevron w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+      </button>
+
+      <div id="sec-nueva-deuda" class="accordion-content border-t border-slate-800/80 bg-slate-900/50 p-4">
+        <form id="form-deuda" onsubmit="guardarDeuda(event)" class="space-y-3">
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Nombre de la deuda</label>
+            <input type="text" id="deuda-nombre" placeholder="Ej: Hipoteca Casa o Préstamo Coche" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500">
+          </div>
+          
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">Monto inicial prestado (€)</label>
+              <input type="number" step="0.01" id="deuda-original" placeholder="150000" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500">
+            </div>
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">Saldo pendiente actual (€)</label>
+              <input type="number" step="0.01" id="deuda-saldo" placeholder="95000" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">Cuota mensual (€)</label>
+              <input type="number" step="0.01" id="deuda-cuota" placeholder="550" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500">
+            </div>
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">Interés anual (TAE %)</label>
+              <input type="number" step="0.1" id="deuda-tae" placeholder="3.2" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500">
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Fecha aproximada en que empezó (Año y Mes)</label>
+            <input type="month" id="deuda-inicio" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500">
+          </div>
+
+          <div class="flex items-center gap-2 pt-1">
+            <input type="checkbox" id="deuda-hipoteca" class="w-4 h-4 rounded bg-slate-950 border-slate-800 text-emerald-500 focus:ring-0">
+            <label for="deuda-hipoteca" class="text-xs text-slate-300">Es Hipoteca / Préstamo Grande (Excluir de amortización rápida)</label>
+          </div>
+          
+          <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2.5 rounded-xl transition text-sm">Guardar Deuda</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- Lista Dinámica de Deudas -->
+    <section class="space-y-3">
+      <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400 px-1">Tus Deudas y Estado de Pago</h3>
+      <div id="lista-deudas" class="space-y-3">
+        <!-- Generado dinámicamente por JS -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Pie de página con Sello Oficial medbasha disimulado -->
+  <footer class="py-6 text-center border-t border-slate-800/50 mt-8">
+    <div class="inline-flex items-center gap-1.5 opacity-40 hover:opacity-80 transition duration-300">
+      <div class="w-3.5 h-3.5 bg-slate-400 text-slate-950 font-black text-[7px] flex items-center justify-center hexagon">MB</div>
+      <span class="text-[11px] text-slate-400 tracking-wider font-medium lowercase">medbasha</span>
+    </div>
+  </footer>
+
+  <!-- Modal Tutorial de Bienvenida -->
+  <div id="modal-tutorial" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-sm w-full shadow-2xl space-y-4">
+      <div class="text-center space-y-2">
+        <div class="w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-2xl mx-auto">⚡</div>
+        <h3 class="text-lg font-bold text-slate-100">¡Bienvenido a Deuda Cero v1.2.0!</h3>
+        <p class="text-xs text-slate-400 leading-relaxed">
+          Diseñada para darte claridad absoluta sobre tus hipotecas y préstamos antiguos o nuevos.
+        </p>
+      </div>
+      <div class="space-y-2 text-xs text-slate-300 bg-slate-950/50 p-3 rounded-2xl border border-slate-800/80">
+        <p>🔹 <strong>Camino recorrido:</strong> Descubre cuánto has abonado exactamente desde que contrataste tu hipoteca hasta hoy.</p>
+        <p>🔹 <strong>Fecha de Libertad:</strong> Descubre en qué mes y año dirás adiós a tus deudas.</p>
+        <p>🔹 <strong>Estrategia Clara:</strong> Bola de Nieve o Avalancha con amortizaciones extra.</p>
+        <p>🔹 <strong>Seguridad Local:</strong> Tus datos protegidos en tu dispositivo sin servidores externos.</p>
+      </div>
+      <button onclick="cerrarTutorial()" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-3 rounded-2xl transition text-sm shadow-lg shadow-emerald-500/10">
+        ¡Entendido!
+      </button>
+    </div>
+  </div>
+
+  <!-- Lógica JavaScript Integrada Completa -->
+  <script>
+    let db;
+    let estrategia = 'nieve';
+
+    const DB_NAME = 'DeudaCeroDB_v120';
+    const DB_VERSION = 1;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      solicitarPersistencia();
+      initDB();
+      comprobarTutorial();
+    });
+
+    async function solicitarPersistencia() {
+      if (navigator.storage && navigator.storage.persist) {
+        await navigator.storage.persist();
+      }
+    }
+
+    function initDB() {
+      const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+      request.onupgradeneeded = (e) => {
+        db = e.target.result;
+        if (!db.objectStoreNames.contains('deudas')) {
+          db.createObjectStore('deudas', { keyPath: 'id', autoIncrement: true });
+        }
+      };
+
+      request.onsuccess = (e) => {
+        db = e.target.result;
+        cargarDeudas();
+      };
+
+      request.onerror = (e) => console.error('Error IndexedDB', e);
+    }
+
+    // Modal Tutorial
+    function comprobarTutorial() {
+      const visto = localStorage.getItem('tutorial_deudacero_visto_v120');
+      if (!visto) {
+        document.getElementById('modal-tutorial').classList.remove('hidden');
+      }
+    }
+
+    function cerrarTutorial() {
+      localStorage.setItem('tutorial_deudacero_visto_v120', 'true');
+      document.getElementById('modal-tutorial').classList.add('hidden');
+    }
+
+    function abrirTutorial() {
+      document.getElementById('modal-tutorial').classList.remove('hidden');
+    }
+
+    // UI Accordion
+    function toggleAccordion(contentId, chevronId) {
+      const content = document.getElementById(contentId);
+      const chevron = document.getElementById(chevronId);
+      content.classList.toggle('open');
+      chevron.classList.toggle('rotate');
+    }
+
+    function setEstrategia(tipo) {
+      estrategia = tipo;
+      const btnNieve = document.getElementById('btn-nieve');
+      const btnAva = document.getElementById('btn-avalancha');
+
+      if (tipo === 'nieve') {
+        btnNieve.className = 'py-2 text-xs font-semibold rounded-lg transition bg-emerald-500 text-slate-950';
+        btnAva.className = 'py-2 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 transition';
+      } else {
+        btnAva.className = 'py-2 text-xs font-semibold rounded-lg transition bg-emerald-500 text-slate-950';
+        btnNieve.className = 'py-2 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 transition';
+      }
+      cargarDeudas();
+    }
+
+    function guardarDeuda(event) {
+      event.preventDefault();
+      const nombre = document.getElementById('deuda-nombre').value.trim();
+      const original = parseFloat(document.getElementById('deuda-original').value);
+      const saldo = parseFloat(document.getElementById('deuda-saldo').value);
+      const cuota = parseFloat(document.getElementById('deuda-cuota').value);
+      const tae = parseFloat(document.getElementById('deuda-tae').value);
+      const inicio = document.getElementById('deuda-inicio').value;
+      const esHipoteca = document.getElementById('deuda-hipoteca').checked;
+
+      if (!nombre || isNaN(original) || isNaN(saldo) || isNaN(cuota) || isNaN(tae) || !inicio) return;
+
+      const tx = db.transaction(['deudas'], 'readwrite');
+      const store = tx.objectStore('deudas');
+      store.add({ nombre, original, saldo, cuota, tae, inicio, esHipoteca });
+
+      tx.oncomplete = () => {
+        document.getElementById('form-deuda').reset();
+        toggleAccordion('sec-nueva-deuda', 'chev-nueva-deuda');
+        cargarDeudas();
+      };
+    }
+
+    function borrarDeuda(id) {
+      const tx = db.transaction(['deudas'], 'readwrite');
+      tx.objectStore('deudas').delete(id);
+      tx.oncomplete = () => cargarDeudas();
+    }
+
+    function amortizarExtra(id) {
+      const monto = prompt("¿Cuánto dinero extra quieres amortizar hoy en esta deuda? (€):");
+      if (!monto || isNaN(monto) || parseFloat(monto) <= 0) return;
+
+      const tx = db.transaction(['deudas'], 'readwrite');
+      const store = tx.objectStore('deudas');
+      const request = store.get(id);
+
+      request.onsuccess = () => {
+        const deuda = request.result;
+        deuda.saldo = Math.max(0, deuda.saldo - parseFloat(monto));
+        store.put(deuda);
+        tx.oncomplete = () => cargarDeudas();
+      };
+    }
+
+    function cargarDeudas() {
+      if (!db) return;
+      const tx = db.transaction(['deudas'], 'readonly');
+      const store = tx.objectStore('deudas');
+      const request = store.getAll();
+
+      request.onsuccess = () => {
+        let deudas = request.result || [];
+        
+        let deudasConsumo = deudas.filter(d => !d.esHipoteca);
+        let hipotecas = deudas.filter(d => d.esHipoteca);
+
+        if (estrategia === 'nieve') {
+          deudasConsumo.sort((a, b) => a.saldo - b.saldo);
+        } else {
+          deudasConsumo.sort((a, b) => b.tae - a.tae);
+        }
+
+        renderizarApp([...deudasConsumo, ...hipotecas]);
+      };
+    }
+
+    function calcularMesesPasados(fechaInicioStr) {
+      if (!fechaInicioStr) return 0;
+      const [yearStr, monthStr] = fechaInicioStr.split('-');
+      const fechaInicio = new Date(parseInt(yearStr), parseInt(monthStr) - 1, 1);
+      const hoy = new Date();
+      
+      let meses = (hoy.getFullYear() - fechaInicio.getFullYear()) * 12;
+      meses += hoy.getMonth() - fechaInicio.getMonth();
+      return Math.max(0, meses);
+    }
+
+    function renderizarApp(deudas) {
+      const contenedor = document.getElementById('lista-deudas');
+      contenedor.innerHTML = '';
+
+      let totalDeudaPendiente = 0;
+      let totalOriginalPrestado = 0;
+      let totalAbonadoHistorico = 0;
+      let totalCuotas = 0;
+      const extra = parseFloat(document.getElementById('input-extra').value) || 0;
+
+      document.getElementById('total-extra').textContent = `${extra.toFixed(2)} €/mes`;
+
+      if (deudas.length === 0) {
+        contenedor.innerHTML = `
+          <div class="text-center py-8 bg-slate-900/40 border border-dashed border-slate-800 rounded-2xl p-4">
+            <p class="text-slate-500 text-sm">No tienes deudas registradas.</p>
+            <p class="text-xs text-slate-600 mt-1">¡Añade tu hipoteca o préstamo para ver tu progreso!</p>
+          </div>`;
+        document.getElementById('total-deuda').textContent = '0,00 €';
+        document.getElementById('total-cuotas').textContent = '0,00 €/mes';
+        document.getElementById('fecha-libertad').textContent = '¡Sin Deudas!';
+        document.getElementById('total-abonado-historico').textContent = '0,00 €';
+        document.getElementById('porcentaje-global').textContent = '0%';
+        return;
+      }
+
+      const primerConsumoIndex = deudas.findIndex(d => !d.esHipoteca);
+      let maxMesesRestantes = 0;
+
+      deudas.forEach((item, index) => {
+        totalDeudaPendiente += item.saldo;
+        totalOriginalPrestado += item.original;
+        totalCuotas += item.cuota;
+
+        const mesesPasados = calcularMesesPasados(item.inicio);
+        const yaAbonadoEstimado = Math.max(0, item.original - item.saldo);
+        totalAbonadoHistorico += yaAbonadoEstimado;
+
+        const porcentajePagado = Math.min(100, Math.max(0, (yaAbonadoEstimado / item.original) * 100));
+
+        const esTarget = index === primerConsumoIndex;
+        const cuotaEfectiva = item.cuota + (esTarget ? extra : 0);
+        
+        const tasaMensual = (item.tae / 100) / 12;
+        let mesesRestantes = 0;
+        let saldoTemp = item.saldo;
+        let totalInteresesFuturos = 0;
+
+        if (cuotaEfectiva > saldoTemp * tasaMensual) {
+          while (saldoTemp > 0 && mesesRestantes < 600) {
+            let interesMes = saldoTemp * tasaMensual;
+            totalInteresesFuturos += interesMes;
+            saldoTemp = saldoTemp + interesMes - cuotaEfectiva;
+            mesesRestantes++;
+          }
+        } else {
+          mesesRestantes = 999;
+        }
+
+        if (mesesRestantes > maxMesesRestantes && mesesRestantes !== 999) maxMesesRestantes = mesesRestantes;
+
+        let colorPeligro = 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
+        let textoPeligro = 'Bajo';
+        if (item.tae >= 15) {
+          colorPeligro = 'text-rose-400 bg-rose-500/10 border-rose-500/20';
+          textoPeligro = '¡Muy Alto!';
+        } else if (item.tae >= 8) {
+          colorPeligro = 'text-amber-400 bg-amber-500/10 border-amber-500/20';
+          textoPeligro = 'Medio';
+        }
+
+        const tarjeta = document.createElement('div');
+        tarjeta.className = `bg-slate-900 border ${esTarget ? 'border-emerald-500/60 ring-1 ring-emerald-500/20' : 'border-slate-800'} rounded-2xl overflow-hidden shadow-sm`;
+
+        tarjeta.innerHTML = `
+          <button onclick="toggleAccordion('det-${item.id}', 'chev-${item.id}')" class="w-full p-4 flex items-center justify-between text-left hover:bg-slate-800/40 transition">
+            <div class="flex items-center gap-3 w-full pr-2">
+              <span class="w-7 h-7 shrink-0 rounded-full ${esTarget ? 'bg-emerald-500 text-slate-950 font-black' : 'bg-slate-800 text-slate-400'} flex items-center justify-center text-xs">
+                ${item.esHipoteca ? '🏠' : index + 1}
+              </span>
+              <div class="w-full">
+                <div class="flex items-center justify-between">
+                  <h4 class="font-bold text-slate-100 text-sm flex items-center gap-1.5">
+                    ${item.nombre} 
+                    ${esTarget ? '<span class="text-[9px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded font-semibold">OBJETIVO ATAQUE</span>' : ''}
+                    ${item.esHipoteca ? '<span class="text-[9px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded font-semibold">HIPOTECA</span>' : ''}
+                  </h4>
+                  <span class="text-xs font-bold text-emerald-400">${porcentajePagado.toFixed(0)}% pagado</span>
+                </div>
+                <!-- Barra visual mini de progreso -->
+                <div class="w-full bg-slate-950 rounded-full h-1.5 mt-1.5 overflow-hidden border border-slate-800">
+                  <div class="bg-emerald-500 h-1.5 rounded-full transition-all duration-500" style="width: ${porcentajePagado}%"></div>
+                </div>
+              </div>
+            </div>
+            <svg id="chev-${item.id}" class="chevron w-4 h-4 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+          </button>
+
+          <div id="det-${item.id}" class="accordion-content border-t border-slate-800 bg-slate-950/60 p-4 space-y-3">
+            
+            <!-- Resumen Recorrido Pasado -->
+            <div class="bg-slate-900 p-3 rounded-xl border border-slate-800 space-y-2">
+              <span class="text-[11px] font-bold text-emerald-400 uppercase tracking-wider block">Camino Recorrido (${mesesPasados} meses pagando)</span>
+              <div class="grid grid-cols-2 gap-2 text-xs">
+                <div>
+                  <span class="text-slate-500 block">Monto Inicial:</span>
+                  <span class="font-bold text-slate-300">${item.original.toFixed(2)} €</span>
+                </div>
+                <div>
+                  <span class="text-slate-500 block">Capital ya Abonado:</span>
+                  <span class="font-bold text-emerald-400">${yaAbonadoEstimado.toFixed(2)} €</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Futuro y Costo Restante -->
+            <div class="bg-slate-900 p-3 rounded-xl border border-slate-800 space-y-2">
+              <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Lo que te queda por liquidar</span>
+              <div class="grid grid-cols-2 gap-2 text-xs">
+                <div>
+                  <span class="text-slate-500 block">Saldo Restante:</span>
+                  <span class="font-bold text-rose-400">${item.saldo.toFixed(2)} €</span>
+                </div>
+                <div>
+                  <span class="text-slate-500 block">Tiempo Restante:</span>
+                  <span class="font-bold text-slate-200">${mesesRestantes === 999 ? 'Cuota insuficiente' : mesesRestantes + ' meses'}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 text-xs">
+              <div class="bg-slate-900 p-2.5 rounded-xl border border-slate-800">
+                <span class="text-slate-400 block">Interés TAE</span>
+                <span class="font-semibold text-slate-200">${item.tae}%</span>
+              </div>
+              <div class="bg-slate-900 p-2.5 rounded-xl border border-slate-800">
+                <span class="text-slate-400 block">Pago mensual hoy</span>
+                <span class="font-semibold ${esTarget ? 'text-emerald-400' : 'text-slate-200'}">${cuotaEfectiva.toFixed(2)} €</span>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-1">
+              <button onclick="amortizarExtra(${item.id})" class="text-xs bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/30 px-3 py-1.5 rounded-xl font-medium transition flex items-center gap-1">
+                ⚡ Anotar Pago Extra
+              </button>
+              <button onclick="borrarDeuda(${item.id})" class="text-xs text-rose-400 hover:text-rose-300 font-medium px-2 py-1 transition">Eliminar</button>
+            </div>
+          </div>
+        `;
+
+        contenedor.appendChild(tarjeta);
+      });
+
+      // Actualizar Globales
+      const porcentajeGlobalCalc = totalOriginalPrestado > 0 ? (totalAbonadoHistorico / totalOriginalPrestado) * 100 : 0;
+      document.getElementById('total-abonado-historico').textContent = `${totalAbonadoHistorico.toFixed(2)} €`;
+      document.getElementById('porcentaje-global').textContent = `${porcentajeGlobalCalc.toFixed(0)}%`;
+
+      if (maxMesesRestantes > 0 && maxMesesRestantes < 999) {
+        const fechaActual = new Date();
+        fechaActual.setMonth(fechaActual.getMonth() + maxMesesRestantes);
+        const opciones = { year: 'numeric', month: 'long' };
+        document.getElementById('fecha-libertad').textContent = fechaActual.toLocaleDateString('es-ES', opciones);
+      } else {
+        document.getElementById('fecha-libertad').textContent = 'Revisa tus cuotas mínimas';
+      }
+
+      document.getElementById('total-deuda').textContent = `${totalDeudaPendiente.toFixed(2)} €`;
+      document.getElementById('total-cuotas').textContent = `${totalCuotas.toFixed(2)} €/mes`;
+    }
+
+    function actualizarSimulacion() {
+      cargarDeudas();
+    }
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js').catch(err => console.error("Error SW:", err));
+    }
+  </script>
+</body>
+</html>
